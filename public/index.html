@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Upload Photos</title>
+<title>Toriann and Brad's Wedding Photo Drop</title>
 <style>
   :root {
     --accent: #6ea8fe;
@@ -37,12 +37,8 @@
   }
   h1 {
     font-size: 1.4rem;
-    margin: 0 0 6px;
-  }
-  p.sub {
-    color: var(--muted);
-    margin: 0 0 24px;
-    font-size: 0.95rem;
+    margin: 0 0 20px;
+    text-align: center;
   }
   #dropzone {
     border: 2px dashed var(--border);
@@ -126,11 +122,10 @@
 </head>
 <body>
   <div class="card">
-    <h1>Upload photos</h1>
-    <p class="sub">Drop as many photos as you like, or tap to choose files. No limit on how many at once.</p>
+    <h1>Toriann and Brad's Wedding Photo Drop</h1>
 
     <div id="dropzone">
-      <p><strong>Click to select</strong> or drag and drop files here</p>
+      <p><strong>Tap to select photos</strong></p>
       <input type="file" id="fileInput" multiple accept="image/*,video/*">
     </div>
 
@@ -194,7 +189,7 @@ function uploadFile(file) {
       done++;
       row.className = 'thanks-card';
       row.innerHTML = `
-        <p class="thanks-title">Thank you! We appreciate you celebrating with us and helping add to our memories!</p>
+        <p class="thanks-title">Thank you! We appreciate you celebrating and helping us add to our memories!</p>
       `;
     } else {
       status.textContent = 'Failed';
