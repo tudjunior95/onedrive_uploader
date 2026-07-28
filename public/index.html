@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload Photos</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --border: #d1d5db;
+    --bg: #f9fafb;
+    --text: #111827;
+    --muted: #6b7280;
+    --success: #16a34a;
+    --error: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 24px 16px 60px;
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    padding: 32px;
+    max-width: 560px;
+    width: 100%;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 6px;
+  }
+  p.sub {
+    color: var(--muted);
+    margin: 0 0 24px;
+    font-size: 0.95rem;
+  }
+  #dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #dropzone.drag {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  #dropzone p {
+    margin: 0;
+    color: var(--muted);
+  }
+  #dropzone strong {
+    color: var(--accent);
+  }
+  input[type=file] { display: none; }
+  #fileList {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+  }
+  .file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.15s;
+  }
+  .status { width: 70px; text-align: right; color: var(--muted); }
+  .status.done { color: var(--success); }
+  .status.error { color: var(--error); }
+  #summary {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Upload photos</h1>
+    <p class="sub">Drop as many photos as you like, or tap to choose files. No limit on how many at once.</p>
+
+    <div id="dropzone">
+      <p><strong>Click to select</strong> or drag and drop files here</p>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*">
+    </div>
+
+    <div id="fileList"></div>
+    <div id="summary"></div>
+  </div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const summary = document.getElementById('summary');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+let total = 0, done = 0, failed = 0;
+
+function handleFiles(files) {
+  const arr = Array.from(files);
+  total += arr.length;
+  arr.forEach(uploadFile);
+  updateSummary();
+}
+
+function uploadFile(file) {
+  const row = document.createElement('div');
+  row.className = 'file-row';
+  row.innerHTML = `
+    <div class="file-name">${file.name}</div>
+    <div class="bar-track"><div class="bar-fill"></div></div>
+    <div class="status">0%</div>
+  `;
+  fileList.appendChild(row);
+  const fill = row.querySelector('.bar-fill');
+  const status = row.querySelector('.status');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/upload');
+
+  xhr.upload.addEventListener('progress', e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      fill.style.width = pct + '%';
+      status.textContent = pct + '%';
+    }
+  });
+
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      fill.style.width = '100%';
+      status.textContent = 'Done';
+      status.classList.add('done');
+      done++;
+    } else {
+      status.textContent = 'Failed';
+      status.classList.add('error');
+      failed++;
+    }
+    updateSummary();
+  };
+
+  xhr.onerror = () => {
+    status.textContent = 'Failed';
+    status.classList.add('error');
+    failed++;
+    updateSummary();
+  };
+
+  xhr.send(formData);
+}
+
+function updateSummary() {
+  summary.textContent = `${done + failed} / ${total} uploaded` + (failed ? ` (${failed} failed)` : '');
+}
+</script>
+</body>
+</html>
