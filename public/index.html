@@ -16,7 +16,11 @@
     --success: #4ade80;
     --error: #f87171;
   }
-  * { box-sizing: border-box; }
+
+  * {
+    box-sizing: border-box;
+  }
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
@@ -26,6 +30,7 @@
     display: flex;
     justify-content: center;
   }
+
   .card {
     background: var(--card-bg);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -35,11 +40,13 @@
     max-width: 560px;
     width: 100%;
   }
+
   h1 {
     font-size: 1.4rem;
     margin: 0 0 20px;
     text-align: center;
   }
+
   #dropzone {
     border: 2px dashed var(--border);
     border-radius: 12px;
@@ -48,30 +55,39 @@
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
   }
+
   #dropzone.drag {
     border-color: var(--accent);
     background: var(--accent-light);
   }
+
   #dropzone p {
     margin: 0;
     color: var(--muted);
   }
+
   #dropzone strong {
     color: var(--accent);
   }
-  input[type=file] { display: none; }
+
+  input[type=file] {
+    display: none;
+  }
+
   #fileList {
     margin-top: 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
+
   .file-row {
     display: flex;
     align-items: center;
     gap: 12px;
     font-size: 0.9rem;
   }
+
   .thumb {
     width: 36px;
     height: 36px;
@@ -80,22 +96,30 @@
     flex-shrink: 0;
     background: rgba(255, 255, 255, 0.1);
   }
+
   .file-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
   .thanks-card {
     background: rgba(255, 255, 255, 0.06);
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 16px;
+    text-align: center;
   }
+
   .thanks-title {
-    font-weight: 500;
     margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
     line-height: 1.5;
+    text-align: center;
+    color: var(--text);
   }
+
   .bar-track {
     flex: 1;
     height: 6px;
@@ -103,15 +127,28 @@
     border-radius: 3px;
     overflow: hidden;
   }
+
   .bar-fill {
     height: 100%;
     background: var(--accent);
     width: 0%;
     transition: width 0.15s;
   }
-  .status { width: 70px; text-align: right; color: var(--muted); }
-  .status.done { color: var(--success); }
-  .status.error { color: var(--error); }
+
+  .status {
+    width: 70px;
+    text-align: right;
+    color: var(--muted);
+  }
+
+  .status.done {
+    color: var(--success);
+  }
+
+  .status.error {
+    color: var(--error);
+  }
+
   #summary {
     margin-top: 20px;
     font-size: 0.9rem;
@@ -120,6 +157,7 @@
   }
 </style>
 </head>
+
 <body>
   <div class="card">
     <h1>Toriann and Brad's Wedding Photo Drop</h1>
@@ -140,16 +178,27 @@ const fileList = document.getElementById('fileList');
 const summary = document.getElementById('summary');
 
 dropzone.addEventListener('click', () => fileInput.click());
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropzone.classList.add('drag');
+});
+
+dropzone.addEventListener('dragleave', () => {
+  dropzone.classList.remove('drag');
+});
+
 dropzone.addEventListener('drop', e => {
   e.preventDefault();
   dropzone.classList.remove('drag');
   handleFiles(e.dataTransfer.files);
 });
+
 fileInput.addEventListener('change', () => handleFiles(fileInput.files));
 
-let total = 0, done = 0, failed = 0;
+let total = 0;
+let done = 0;
+let failed = 0;
 
 function handleFiles(files) {
   const arr = Array.from(files);
@@ -166,7 +215,9 @@ function uploadFile(file) {
     <div class="bar-track"><div class="bar-fill"></div></div>
     <div class="status">0%</div>
   `;
+
   fileList.appendChild(row);
+
   const fill = row.querySelector('.bar-fill');
   const status = row.querySelector('.status');
 
@@ -189,13 +240,16 @@ function uploadFile(file) {
       done++;
       row.className = 'thanks-card';
       row.innerHTML = `
-        <p class="thanks-title">Thank you for helping us add to our memories!</p>
+        <p class="thanks-title">
+          Thank you for helping us add to our memories!
+        </p>
       `;
     } else {
       status.textContent = 'Failed, please contact the owner of this product';
       status.classList.add('error');
       failed++;
     }
+
     updateSummary();
   };
 
@@ -210,8 +264,11 @@ function uploadFile(file) {
 }
 
 function updateSummary() {
-  summary.textContent = `${done + failed} / ${total} uploaded` + (failed ? ` (${failed} failed)` : '');
+  summary.textContent =
+    `${done + failed} / ${total} uploaded` +
+    (failed ? ` (${failed} failed)` : '');
 }
 </script>
+
 </body>
 </html>
