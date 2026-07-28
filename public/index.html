@@ -189,10 +189,10 @@ function uploadFile(file) {
       done++;
       row.className = 'thanks-card';
       row.innerHTML = `
-        <p class="thanks-title">Thank you! We appreciate you celebrating and helping us add to our memories!</p>
+        <p class="thanks-title">Thank you for helping us add to our memories!</p>
       `;
     } else {
-      status.textContent = 'Failed';
+      status.textContent = 'Failed, please contact the owner of this product';
       status.classList.add('error');
       failed++;
     }
