@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const {
@@ -112,8 +113,14 @@ app.get('/auth/status', async (req, res) => {
 
 // ---------- Upload endpoint ----------
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB per file
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, os.tmpdir()),
+    filename: (req, file, cb) => {
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      cb(null, `${unique}-${file.originalname}`);
+    },
+  }),
+  limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB per file
 });
 
 async function ensureUploadSession(accessToken, filename) {
@@ -134,22 +141,26 @@ async function ensureUploadSession(accessToken, filename) {
   return resp.data.uploadUrl;
 }
 
-async function uploadInChunks(uploadUrl, buffer) {
+async function uploadInChunks(uploadUrl, filePath, total) {
   const CHUNK_SIZE = 10 * 327680; // ~3.2MB, must be a multiple of 327,680 bytes
-  const total = buffer.length;
-
-  // Files under the chunk size can go in a single request.
-  for (let start = 0; start < total; start += CHUNK_SIZE) {
-    const end = Math.min(start + CHUNK_SIZE, total);
-    const chunk = buffer.subarray(start, end);
-    await axios.put(uploadUrl, chunk, {
-      headers: {
-        'Content-Length': chunk.length,
-        'Content-Range': `bytes ${start}-${end - 1}/${total}`,
-      },
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-    });
+  const fileHandle = await fs.promises.open(filePath, 'r');
+  try {
+    for (let start = 0; start < total; start += CHUNK_SIZE) {
+      const end = Math.min(start + CHUNK_SIZE, total);
+      const length = end - start;
+      const buffer = Buffer.alloc(length);
+      await fileHandle.read(buffer, 0, length, start);
+      await axios.put(uploadUrl, buffer, {
+        headers: {
+          'Content-Length': length,
+          'Content-Range': `bytes ${start}-${end - 1}/${total}`,
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      });
+    }
+  } finally {
+    await fileHandle.close();
   }
 }
 
@@ -159,11 +170,16 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file received' });
 
+    const { size } = await fs.promises.stat(file.path);
     const uploadUrl = await ensureUploadSession(accessToken, file.originalname);
-    await uploadInChunks(uploadUrl, file.buffer);
+    await uploadInChunks(uploadUrl, file.path, size);
 
+    await fs.promises.unlink(file.path).catch(() => {});
     res.json({ ok: true, filename: file.originalname });
   } catch (e) {
+    if (req.file?.path) {
+      fs.promises.unlink(req.file.path).catch(() => {});
+    }
     if (e.message === 'NOT_AUTHENTICATED') {
       return res.status(401).json({ error: 'Server is not connected to OneDrive yet. Visit /auth/login once as the owner.' });
     }
