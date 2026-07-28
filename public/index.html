@@ -6,14 +6,15 @@
 <title>Upload Photos</title>
 <style>
   :root {
-    --accent: #2563eb;
-    --accent-light: #eff6ff;
-    --border: #d1d5db;
-    --bg: #f9fafb;
-    --text: #111827;
-    --muted: #6b7280;
-    --success: #16a34a;
-    --error: #dc2626;
+    --accent: #6ea8fe;
+    --accent-light: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.25);
+    --bg: #31578f;
+    --card-bg: rgba(255, 255, 255, 0.07);
+    --text: #ffffff;
+    --muted: #cfdaee;
+    --success: #4ade80;
+    --error: #f87171;
   }
   * { box-sizing: border-box; }
   body {
@@ -26,9 +27,10 @@
     justify-content: center;
   }
   .card {
-    background: white;
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     padding: 32px;
     max-width: 560px;
     width: 100%;
@@ -74,16 +76,34 @@
     gap: 12px;
     font-size: 0.9rem;
   }
+  .thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.1);
+  }
   .file-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .thanks-card {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .thanks-title {
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.5;
+  }
   .bar-track {
     flex: 1;
     height: 6px;
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -171,10 +191,11 @@ function uploadFile(file) {
 
   xhr.onload = () => {
     if (xhr.status === 200) {
-      fill.style.width = '100%';
-      status.textContent = 'Done';
-      status.classList.add('done');
       done++;
+      row.className = 'thanks-card';
+      row.innerHTML = `
+        <p class="thanks-title">Thank you! We appreciate you celebrating with us and helping add to our memories!</p>
+      `;
     } else {
       status.textContent = 'Failed';
       status.classList.add('error');
