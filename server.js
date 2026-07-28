@@ -13,6 +13,8 @@ const {
   REDIRECT_URI,
   TARGET_FOLDER = 'Photo Uploads',
   PORT = 3000,
+  UPSTASH_REDIS_REST_URL,
+  UPSTASH_REDIS_REST_TOKEN,
 } = process.env;
 
 if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
@@ -20,34 +22,45 @@ if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
   process.exit(1);
 }
 
-const TOKEN_PATH = path.join(__dirname, 'data', 'token.json');
+if (!UPSTASH_REDIS_REST_URL || !UPSTASH_REDIS_REST_TOKEN) {
+  console.error('Missing required env vars: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN');
+  process.exit(1);
+}
+
 const AUTHORITY = `https://login.microsoftonline.com/${TENANT}`;
 const SCOPE = 'offline_access Files.ReadWrite';
+const TOKEN_KEY = 'onedrive_uploader_tokens';
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- Token storage ----------
-function loadTokens() {
+// ---------- Token storage (Upstash Redis, survives redeploys) ----------
+async function loadTokens() {
   try {
-    return JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
+    const resp = await axios.get(`${UPSTASH_REDIS_REST_URL}/get/${TOKEN_KEY}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
+    });
+    if (!resp.data || resp.data.result == null) return null;
+    return JSON.parse(resp.data.result);
   } catch {
     return null;
   }
 }
 
-function saveTokens(tokens) {
-  fs.mkdirSync(path.dirname(TOKEN_PATH), { recursive: true });
+async function saveTokens(tokens) {
   const withExpiry = {
     ...tokens,
     expires_at: Date.now() + (tokens.expires_in - 60) * 1000, // refresh 60s early
   };
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(withExpiry, null, 2));
+  const value = encodeURIComponent(JSON.stringify(withExpiry));
+  await axios.get(`${UPSTASH_REDIS_REST_URL}/set/${TOKEN_KEY}/${value}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
+  });
   return withExpiry;
 }
 
 async function getAccessToken() {
-  let tokens = loadTokens();
+  let tokens = await loadTokens();
   if (!tokens) {
     throw new Error('NOT_AUTHENTICATED');
   }
@@ -63,7 +76,7 @@ async function getAccessToken() {
     scope: SCOPE,
   });
   const resp = await axios.post(`${AUTHORITY}/oauth2/v2.0/token`, params);
-  tokens = saveTokens(resp.data);
+  tokens = await saveTokens(resp.data);
   return tokens.access_token;
 }
 
@@ -94,7 +107,7 @@ app.get('/auth/callback', async (req, res) => {
       scope: SCOPE,
     });
     const resp = await axios.post(`${AUTHORITY}/oauth2/v2.0/token`, params);
-    saveTokens(resp.data);
+    await saveTokens(resp.data);
     res.send('<h2>OneDrive connected.</h2><p>You can close this tab. The upload page is ready to use.</p>');
   } catch (e) {
     console.error(e.response?.data || e.message);
